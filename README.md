@@ -20,4 +20,5 @@
 - 2024-04-15 : Première version locale.
 - 2024-04-27 : Seconde version locale.
 - 2024-04-28 : Mise sur GitHub.
+- 2024-05-10 : Mise à jour fichier de traduction, correction de bugs, simplification du flux de création des figures.
 

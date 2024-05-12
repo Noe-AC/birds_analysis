@@ -5,6 +5,9 @@ Chronologie :
 - 2024-04-15 : première version pour essayer BirdNet
 - 2024-04-27 : ajout d'une boucle pour détecter les oiseaux dans plusieurs fichiers audio
 - 2024-04-28 : ajout d'une fonction pour générer des figures
+- 2024-05-11 : correction nom du csv de traduction des noms d'oiseaux en/fr
+- 2024-05-11 : ajout d'oiseaux dans la liste d'oiseaux traduits
+- 2024-05-11 : ajout d'une option pour exporter les figures de l'analyse des détections
 
 Crédit :
 - Noé Aubin-Cadot
@@ -242,16 +245,177 @@ def translate_birds(
 	df_detections.to_csv(output_file,index=False)
 	print('Done.')
 
+
+
+
+def make_path(path,verbose=False):
+	import os
+	path_components = path.split('/')
+	if '' in path_components:
+		path_components.remove('')
+	for i in range(1,len(path_components)+1):
+		folder = '/'.join(path_components[:i])
+		if not os.path.exists(folder):
+			if verbose:
+				print(f"Folder '{folder}' does not exist, it is created.")
+			os.mkdir(folder)
+		else:
+			if verbose:
+				print(f"Folder '{folder}' already exists, continue.")
+
+def export_figure(
+	plt,
+	output_file_fig = None,
+	do_make_path    = False,
+	do_clean_memory = False,
+	verbose         = True
+):
+	if output_file_fig==None:
+		plt.show()
+	else:
+		if do_make_path:
+			output_path = '/'.join(output_file_fig.split('/')[:-1])
+			if verbose:
+				print('Making path :',output_path)
+			make_path(output_path)
+		if verbose:
+			print('Exporting :',output_file_fig)
+		plt.savefig(output_file_fig,dpi=300)
+		plt.close()
+		if do_clean_memory:
+			plt.cla()
+			plt.clf()
+			plt.close('all')
+			plt.close(fig)
+			import gc
+			gc.collect()
+		if verbose:
+			print('Done.')
+
+
+def show_barplot_confidence(
+	df,
+	output_file_fig = None,
+):
+	df = df.copy() # Pour éviter modifications in-place
+	df.sort_values(by=['oiseau_fr','confidence'],ascending=[True,False],inplace=True)
+	df.drop_duplicates(subset=['oiseau_fr'],inplace=True)
+	df.sort_values(by='confidence',ascending=False,inplace=True)
+	df = df[['oiseau_fr','confidence']]
+	print(df.to_string(index=False))
+	import matplotlib.pyplot as plt
+	ax = df.head(50).sort_values(by='confidence',ascending=True).plot(
+		kind    = 'barh',
+		x       = 'oiseau_fr',
+		y       = 'confidence',
+		figsize = (12,8),
+	)
+	ax.tick_params(axis='y', labelsize=11)
+	plt.title('Confiance maximale détectée par espèce (confiance ≥ 0.25)',size=18)
+	plt.xlabel('Confiance maximale détectée',size=15)
+	plt.ylabel("Espèce d'oiseau",size=15)
+	xticks = np.arange(0.0,1.05,0.05).round(2)
+	plt.xticks(xticks,[format(x,'0.2f') for x in xticks])
+	plt.xlim(0,1)
+	plt.grid()
+	plt.tight_layout()
+	export_figure(
+		plt             = plt,
+		output_file_fig = output_file_fig,
+		do_make_path    = True,
+	)
+
+def show_barplot_frequence(
+	df,
+	output_file_fig = None,
+):
+	df = df.copy() # Pour éviter modifications in-place
+	s_count = df['oiseau_fr'].value_counts().sort_values(ascending=True)
+	print(s_count.sort_values(ascending=False))
+	import matplotlib.pyplot as plt
+	ax = s_count.plot(
+		kind    = 'barh',
+		figsize = (12,8),
+	)
+	ax.tick_params(axis='y', labelsize=11)
+	plt.title('Nombre de détections (confiance ≥ 0.25)',size=18)
+	plt.xlabel('Nombre de détections',size=15)
+	plt.ylabel("Espèce d'oiseau",size=15)
+	plt.xticks(np.arange(0,95,5),np.arange(0,95,5))
+	plt.grid()
+	plt.tight_layout()
+	export_figure(
+		plt             = plt,
+		output_file_fig = output_file_fig,
+		do_make_path    = True,
+	)
+
+def show_scatterplot_freq_conf(
+	df,
+	output_file_fig = None,
+):
+	# Pour chaque oiseau on calcule le nombre de fois qu'il a été détecté
+	s_count = df['oiseau_fr'].value_counts().sort_index()
+	s_count.name = 'count'
+	# Pour calculer la confiance moyenne sur les 5 meilleures détections par oiseau
+	df_sorted  = df.sort_values(by=['oiseau_fr', 'confidence'], ascending=[True, False])
+	df_top     = df_sorted[['oiseau_fr','confidence']].groupby('oiseau_fr').head(5)
+	s_top      = df_top.groupby('oiseau_fr')['confidence'].mean().sort_index()
+	s_top.name = 'confidence_mean'
+	# Concaténation du dénombrement et des confiances moyennes des 5 plus confiantes observations
+	df_count_top = pd.concat((s_count,s_top),axis=1)
+	print(df_count_top)
+	import matplotlib.pyplot as plt
+	df_count_top.plot(
+		kind    = 'scatter',
+		x       = 'count',
+		y       = 'confidence_mean',
+		figsize = (12,8),
+		s       = 5,
+	)
+	plt.title('Confiance moyenne vs nombre de détections (confiance ≥ 0.25)',size=18)
+	plt.xlabel('Nombre de détections',size=15)
+	plt.ylabel('Moyenne de la confiance des 5 plus confiantes détections',size=15)
+	plt.xticks(np.arange(0,100,5),np.arange(0,100,5))
+	yticks = np.arange(0.2,1.05,0.05).round(2)
+	plt.yticks(yticks,[format(y,'0.2f') for y in yticks])
+	# https://adjusttext.readthedocs.io/en/latest/_modules/adjustText.html
+	bbox = {
+		'facecolor' : 'red',
+		'alpha'     : 0.05,
+	}
+	texts = [plt.text(x=x,y=y,s=bird, bbox=bbox) for x, y, bird in zip(df_count_top['count'], df_count_top['confidence_mean'], df_count_top.index.to_list())]
+	from adjustText import adjust_text # pip install adjustText
+	adjust_text(
+		texts           = texts,
+		arrowprops      = dict(arrowstyle="->", color='r', lw=0.5, mutation_scale=10),
+		connectionstyle = 'arc3,rad=0.3',
+	)
+	plt.grid()
+	plt.tight_layout()
+	export_figure(
+		plt             = plt,
+		output_file_fig = output_file_fig,
+		do_make_path    = True,
+	)
+
+
+
+
+
 def analyse_birds(
 	input_file,
+	output_file_fig_confidence = None,
+	output_file_fig_frequence  = None,
+	output_file_fig_freq_conf  = None,
+	datetime_start             = None,
+	datetime_end               = None,
 ):
 	# On importe les données
 	print('Importing :',input_file)
 	df = pd.read_csv(input_file)
 
-	# On filtre sur la plage horaire des observations
-	datetime_start,datetime_end = '2024-04-27 11:37','2024-04-27 14:15' # Domaine Saint-Paul à l'Île des Soeurs
-	#datetime_start,datetime_end = '2024-04-27 14h20',None # Parc Maynard-Ferguson à l'Île des Soeurs
+	# Si on veut filtrer sur la plage horaire des observations
 	if datetime_start:
 		df = df[df['file_datetime']>=datetime_start]
 	if datetime_end:
@@ -260,91 +424,29 @@ def analyse_birds(
 	# On ne garde que les détections qui ont au moins 0.25 de confiance
 	df = df[df['confidence']>=0.25]
 
-	import matplotlib.pyplot as plt
 
-	do_show_confident_birds=0
-	if do_show_confident_birds:
-		df.sort_values(by=['oiseau_fr','confidence'],ascending=[True,False],inplace=True)
-		df.drop_duplicates(subset=['oiseau_fr'],inplace=True)
-		df.sort_values(by='confidence',ascending=False,inplace=True)
-		df = df[['oiseau_fr','confidence']]
-		print(df.to_string(index=False))
-		ax = df.head(50).sort_values(by='confidence',ascending=True).plot(
-			kind    = 'barh',
-			x       = 'oiseau_fr',
-			y       = 'confidence',
-			figsize = (12,8),
+	do_show_barplot_confidence=1
+	if do_show_barplot_confidence:
+		show_barplot_confidence(
+			df              = df,
+			output_file_fig = output_file_fig_confidence,
 		)
-		ax.tick_params(axis='y', labelsize=11)
-		plt.title('Confiance maximale détectée par espèce (confiance ≥ 0.25)',size=18)
-		plt.xlabel('Confiance maximale détectée',size=15)
-		plt.ylabel("Espèce d'oiseau",size=15)
-		xticks = np.arange(0.0,1.05,0.05).round(2)
-		plt.xticks(xticks,[format(x,'0.2f') for x in xticks])
-		plt.xlim(0,1)
-		plt.grid()
-		plt.tight_layout()
-		plt.show()
+		
 
-	do_show_frequent_birds=1
-	if do_show_frequent_birds:
-		s_count = df['oiseau_fr'].value_counts().sort_values(ascending=True)
-		print(s_count)
-		ax = s_count.plot(
-			kind    = 'barh',
-			figsize = (12,8),
+	do_show_barplot_frequence=1
+	if do_show_barplot_frequence:
+		show_barplot_frequence(
+			df              = df,
+			output_file_fig = output_file_fig_frequence,
 		)
-		ax.tick_params(axis='y', labelsize=11)
-		plt.title('Nombre de détections (confiance ≥ 0.25)',size=18)
-		plt.xlabel('Nombre de détections',size=15)
-		plt.ylabel("Espèce d'oiseau",size=15)
-		plt.xticks(np.arange(0,95,5),np.arange(0,95,5))
-		plt.grid()
-		plt.tight_layout()
-		plt.show()
 
-	do_scatterplot_agg=0
-	if do_scatterplot_agg:
-		# Pour chaque oiseau on calcule le nombre de fois qu'il a été détecté
-		s_count = df['oiseau_fr'].value_counts().sort_index()
-		s_count.name = 'count'
-		# Pour calculer la confiance moyenne sur les 5 meilleures détections par oiseau
-		df_sorted  = df.sort_values(by=['oiseau_fr', 'confidence'], ascending=[True, False])
-		df_top     = df_sorted[['oiseau_fr','confidence']].groupby('oiseau_fr').head(5)
-		s_top      = df_top.groupby('oiseau_fr')['confidence'].mean().sort_index()
-		s_top.name = 'confidence_mean'
-		# Concaténation du dénombrement et des confiances moyennes des 5 plus confiantes observations
-		df_count_top = pd.concat((s_count,s_top),axis=1)
-		print(df_count_top)
-		#df_count_top = df_count_top[df_count_top['count']>=3]
-		df_count_top.plot(
-			kind    = 'scatter',
-			x       = 'count',
-			y       = 'confidence_mean',
-			figsize = (12,8),
-			s       = 5,
+	do_show_scatterplot_freq_conf=1
+	if do_show_scatterplot_freq_conf:
+		show_scatterplot_freq_conf(
+			df              = df,
+			output_file_fig = output_file_fig_freq_conf,
 		)
-		plt.title('Confiance moyenne vs nombre de détections (confiance ≥ 0.25)',size=18)
-		plt.xlabel('Nombre de détections',size=15)
-		plt.ylabel('Moyenne de la confiance des 5 plus confiantes détections',size=15)
-		plt.xticks(np.arange(0,100,5),np.arange(0,100,5))
-		yticks = np.arange(0.2,1.05,0.05).round(2)
-		plt.yticks(yticks,[format(y,'0.2f') for y in yticks])
-		# https://adjusttext.readthedocs.io/en/latest/_modules/adjustText.html
-		bbox = {
-			'facecolor' : 'red',
-			'alpha'     : 0.05,
-		}
-		texts = [plt.text(x=x,y=y,s=bird, bbox=bbox) for x, y, bird in zip(df_count_top['count'], df_count_top['confidence_mean'], df_count_top.index.to_list())]
-		from adjustText import adjust_text # pip install adjustText
-		adjust_text(
-			texts           = texts,
-			arrowprops      = dict(arrowstyle="->", color='r', lw=0.5, mutation_scale=10),
-			connectionstyle = 'arc3,rad=0.3',
-		)
-		plt.grid()
-		plt.tight_layout()
-		plt.show()
+
 
 
 ################################################################################
@@ -371,39 +473,46 @@ def main():
 	# ------------------------------
 	# Nouveau flux
 
+	#date = '2024-04-27'
+	date = '2024-05-11'
+
 	# 2024-04-27
-	do_input_files_to_DataFrame=0
+	do_input_files_to_DataFrame=1
 	if do_input_files_to_DataFrame:
 		# On prend la liste des fichiers audio WAV disponibles
 		input_files = sorted(glob.glob('input/audio/*.wav'))
 		# On calcule le DataFrame des oiseaux détectés
 		df_detections = input_files_to_DataFrame(
 			input_files = input_files,
-			date        = '2024-04-27',
+			date        = date,
 		)
 		# Preview du DataFrame des détections
 		print('\ndf_detections.shape =',df_detections.shape)
 		print(df_detections)
-		df_detections.to_csv('output/2024-04-27_df_detections_local_en.csv',index=False)
+		df_detections.to_csv(f'output/{date}_df_detections_local_en.csv',index=False)
 
 	# 2024-04-27
-	do_translate_birds=0
+	do_translate_birds=1
 	if do_translate_birds:
-		input_file_detections  = 'output/2024-04-27_df_detections_local_en.csv'
-		input_file_traductions = 'traduction/translation_birds_english_to_french.csv'
-		output_file            = 'output/2024-04-27_df_detections_local_fr.csv'
 		translate_birds(
-			input_file_detections  = input_file_detections,
-			input_file_traductions = input_file_traductions,
-			output_file            = output_file,
+			input_file_detections  = f'output/{date}_df_detections_local_en.csv',
+			input_file_traductions = 'traduction/translation_birds_french_to_english.csv',
+			output_file            = f'output/{date}_df_detections_local_fr.csv',
 		)
 
 	# 2024-04-27
-	do_analyse_birds=0
+	do_analyse_birds=1
 	if do_analyse_birds:
-		input_file = 'output/2024-04-27_df_detections_local_fr.csv'
+		datetime_start,datetime_end=None,None # Si toute la journée
+		#datetime_start,datetime_end = '2024-04-27 11:37','2024-04-27 14:15' # Domaine Saint-Paul à l'Île des Soeurs
+		#datetime_start,datetime_end = '2024-04-27 14h20',None # Parc Maynard-Ferguson à l'Île des Soeurs
 		analyse_birds(
-			input_file = input_file,
+			input_file                 = f'output/{date}_df_detections_local_fr.csv',
+			output_file_fig_confidence = f'figures/{date}/confidence.png',
+			output_file_fig_frequence  = f'figures/{date}/frequence.png',
+			output_file_fig_freq_conf  = f'figures/{date}/freq_conf.png',
+			datetime_start             = datetime_start,
+			datetime_end               = datetime_end,
 		)
 
 if __name__ == '__main__':
