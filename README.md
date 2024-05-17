@@ -17,8 +17,13 @@
 
 **Chronologie du projet :**
 
-- 2024-04-15 : Première version locale.
-- 2024-04-27 : Seconde version locale.
+- 2024-04-15 : Première version locale pour essayer BirdNet sur un seul fichier audio.
+- 2024-04-27 : Seconde version locale avec une boucle pour analyser plusieurs fichiers audio.
+- 2024-04-28 : Ajout d'une fonction pour générer des figures.
 - 2024-04-28 : Mise sur GitHub.
 - 2024-05-10 : Mise à jour fichier de traduction, correction de bugs, simplification du flux de création des figures.
-
+- 2024-05-11 : Correction nom du csv de traduction des noms d'oiseaux en/fr.
+- 2024-05-11 : Ajout d'oiseaux dans la liste d'oiseaux traduits.
+- 2024-05-11 : Ajout d'une option pour exporter les figures de l'analyse des détections.
+- 2024-05-16 : Ajout d'oiseaux dans la liste d'oiseaux traduits.
+- 2024-05-16 : Enlevé l'ancien flux et léger nettoyage du code.

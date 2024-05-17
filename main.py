@@ -2,15 +2,6 @@
 Résumé :
 - Détection d'oiseaux via BirdNet et analyse des détections.
 
-Chronologie :
-- 2024-04-15 : première version pour essayer BirdNet
-- 2024-04-27 : ajout d'une boucle pour détecter les oiseaux dans plusieurs fichiers audio
-- 2024-04-28 : ajout d'une fonction pour générer des figures
-- 2024-05-11 : correction nom du csv de traduction des noms d'oiseaux en/fr
-- 2024-05-11 : ajout d'oiseaux dans la liste d'oiseaux traduits
-- 2024-05-11 : ajout d'une option pour exporter les figures de l'analyse des détections
-- 2024-05-16 : enlevé l'ancien flux et léger nettoyage du code.
-
 Crédit :
 - Noé Aubin-Cadot
 
