@@ -1,5 +1,6 @@
 """
-Détection d'oiseaux et analyse des détections
+Résumé :
+- Détection d'oiseaux via BirdNet et analyse des détections.
 
 Chronologie :
 - 2024-04-15 : première version pour essayer BirdNet
@@ -8,14 +9,12 @@ Chronologie :
 - 2024-05-11 : correction nom du csv de traduction des noms d'oiseaux en/fr
 - 2024-05-11 : ajout d'oiseaux dans la liste d'oiseaux traduits
 - 2024-05-11 : ajout d'une option pour exporter les figures de l'analyse des détections
+- 2024-05-16 : enlevé l'ancien flux et léger nettoyage du code.
 
 Crédit :
 - Noé Aubin-Cadot
 
-To do :
-- Faire une loop pour analyser tout les fichiers WAV Merlin depuis le début et générer des statistiques de détections depuis le début de toutes les observations.
-
-Dependencies :
+Dépendances :
 - pip install birdnetlib
 - pip install librosa
 - pip install resampy
@@ -32,14 +31,6 @@ Installation :
 	pip install birdnetlib
 	pip install librosa
 	pip install resampy
-
-Directory de birdnetlib :
-	/usr/local/lib/python3.9/site-packages/birdnetlib
-
-Questions :
-- Est-ce que je peux les générer en français ?
-Réponse :
-- Non ça ne génère que les noms en anglais, il faut traduire les oiseaux soi-même.
 
 --------------------------------------------------------
 
@@ -58,51 +49,6 @@ from datetime import datetime, timedelta
 ################################################################################
 ################################################################################
 # Définition de fonctions
-# 2024-04-15
-
-def extract_birds(
-	input_file,
-	output_file_detections,
-	output_file_uniques,
-	verbose = False,
-):
-	# https://github.com/kahst/BirdNET-Analyzer?tab=readme-ov-file
-	if verbose:
-		print('Importing libraries...')
-	from birdnetlib import Recording
-	from birdnetlib.analyzer import Analyzer
-	# Load and initialize the BirdNET-Analyzer models.
-	analyzer = Analyzer()
-	recording = Recording(
-		analyzer = analyzer,
-		path     = input_file, # Fichier venant de Merlin via AirDrop
-		lat      =  45.50884,
-		lon      = -73.58781,
-		date     =  datetime(year=2023, month=5, day=13),
-		min_conf =  0.05,
-	)
-	recording.analyze()
-	l_detections = recording.detections
-	df_detections = pd.DataFrame(l_detections)
-	df_detections.to_csv(output_file_detections,index=False)
-	df_detections.sort_values(by='confidence',ascending=False,inplace=True)
-	df_detections.drop_duplicates(subset='common_name',inplace=True)
-	print(df_detections)
-	if verbose:
-		print('Exporting :',output_file)
-	df_detections.to_csv(output_file_uniques,index=False)
-
-	"""
-	À implémenter :
-	- un dataset de toutes les observations avec start_time et end_time en datetime et pas que en secondes
-	- un dataset des oiseaux distincts avec le nombre d'occurences et la moyenne du confidence
-	- traduction vers le français
-	"""
-
-################################################################################
-################################################################################
-# Définition de fonctions
-# 2024-04-27
 
 # Définition d'une fonction qui prend un fichier d'entrée et rend la date correspondante
 def input_file_to_date(
@@ -114,10 +60,12 @@ def input_file_to_date(
 # Définition d'une fonction qui prend une liste de fichiers audio et rend un DataFrame des oiseaux détectés
 def input_files_to_DataFrame(
 	input_files,
+	output_file,
 	latitude  = 45.50884,  # Latitude de Montréal
 	longitude = -73.58781, # Longitude de Montréal
 	min_conf  = 0.05,      # Niveau de confiance minimal
 	date      = None,      # Si on ne veut analyser qu'une date spécifique (format string 'YYYY-MM-DD')
+	verbose   = False,     # Verbosité
 ):
 	# Librairies pour BirdNet
 	from birdnetlib import Recording
@@ -202,9 +150,12 @@ def input_files_to_DataFrame(
 	]
 	df_detections = df_detections[cols]
 
-	# On rend le DataFrame
-	return df_detections
+	if verbose:
+		print('\ndf_detections.shape =',df_detections.shape)
+		print('\ndf_detections :\n',df_detections,sep='')
 
+	# On exporte les résultats
+	df_detections.to_csv(output_file,index=False)
 
 def translate_birds(
 	input_file_detections,
@@ -244,9 +195,6 @@ def translate_birds(
 	print('Exporting :',output_file)
 	df_detections.to_csv(output_file,index=False)
 	print('Done.')
-
-
-
 
 def make_path(path,verbose=False):
 	import os
@@ -399,10 +347,6 @@ def show_scatterplot_freq_conf(
 		do_make_path    = True,
 	)
 
-
-
-
-
 def analyse_birds(
 	input_file,
 	output_file_fig_confidence = None,
@@ -455,43 +399,19 @@ def analyse_birds(
 
 def main():
 
-	# ------------------------------
-	# Ancien flux
+	date = '2024-05-16' # Date où les fichiers audio ont été enregistrés
 
-	# 2024-04-15 (ancien flux)
-	do_extract_birds=0
-	if do_extract_birds:
-		#file_datetime = "2023-05-13 1303"
-		file_datetime = "2024-04-15 1643"
-		file_datetime = "2024-04-19 1557"
-		extract_birds(
-			input_file             = f"input/{file_datetime}.wav",
-			output_file_detections = f"output/{file_datetime}_detections.csv",
-			output_file_uniques    = f"output/{file_datetime}_uniques.csv",
-		)
-
-	# ------------------------------
-	# Nouveau flux
-
-	#date = '2024-04-27'
-	date = '2024-05-11'
-
-	# 2024-04-27
+	# Une fonction pour créer un fichier CSV d'oiseaux détectés à partir de fichiers audio
 	do_input_files_to_DataFrame=1
 	if do_input_files_to_DataFrame:
-		# On prend la liste des fichiers audio WAV disponibles
-		input_files = sorted(glob.glob('input/audio/*.wav'))
-		# On calcule le DataFrame des oiseaux détectés
-		df_detections = input_files_to_DataFrame(
-			input_files = input_files,
+		input_files_to_DataFrame(
+			input_files = sorted(glob.glob(f'input/audio/{date} *.wav')), # En entrée on prend les fichiers audio WAV
+			output_file = f'output/{date}_df_detections_local_en.csv',    # En sortie on obtient un fichier CSV de détections d'oiseaux
 			date        = date,
+			verbose     = True,
 		)
-		# Preview du DataFrame des détections
-		print('\ndf_detections.shape =',df_detections.shape)
-		print(df_detections)
-		df_detections.to_csv(f'output/{date}_df_detections_local_en.csv',index=False)
 
-	# 2024-04-27
+	# Une fonction pour traduire les oiseaux de l'anglais vers le français
 	do_translate_birds=1
 	if do_translate_birds:
 		translate_birds(
@@ -500,19 +420,14 @@ def main():
 			output_file            = f'output/{date}_df_detections_local_fr.csv',
 		)
 
-	# 2024-04-27
+	# Une fonction pour anlayser les détections d'oiseaux
 	do_analyse_birds=1
 	if do_analyse_birds:
-		datetime_start,datetime_end=None,None # Si toute la journée
-		#datetime_start,datetime_end = '2024-04-27 11:37','2024-04-27 14:15' # Domaine Saint-Paul à l'Île des Soeurs
-		#datetime_start,datetime_end = '2024-04-27 14h20',None # Parc Maynard-Ferguson à l'Île des Soeurs
 		analyse_birds(
 			input_file                 = f'output/{date}_df_detections_local_fr.csv',
 			output_file_fig_confidence = f'figures/{date}/confidence.png',
 			output_file_fig_frequence  = f'figures/{date}/frequence.png',
 			output_file_fig_freq_conf  = f'figures/{date}/freq_conf.png',
-			datetime_start             = datetime_start,
-			datetime_end               = datetime_end,
 		)
 
 if __name__ == '__main__':
