@@ -166,7 +166,7 @@ def translate_birds(
 	set_translated = set(df_traductions['oiseau_en'].sort_values())
 	birds_not_translated = sorted(set_detected-set_translated)
 	if len(birds_not_translated)>0:
-		print('Oiseaux non traduits :')
+		print('\nOiseaux non traduits :')
 		for bird in birds_not_translated:
 			print(bird)
 		raise Exception('Translations missing... please fill in the translation file for the birds mentioned above.')
@@ -267,20 +267,27 @@ def show_barplot_confidence(
 def show_barplot_frequence(
 	df,
 	output_file_fig = None,
+	do_log_scale    = True,
 ):
 	df = df.copy() # Pour éviter modifications in-place
 	s_count = df['oiseau_fr'].value_counts().sort_values(ascending=True)
 	print(s_count.sort_values(ascending=False))
+	if do_log_scale:
+		s_count = np.log2(s_count)
 	import matplotlib.pyplot as plt
 	ax = s_count.plot(
 		kind    = 'barh',
 		figsize = (12,8),
 	)
 	ax.tick_params(axis='y', labelsize=11)
-	plt.title('Nombre de détections (confiance ≥ 0.25)',size=18)
-	plt.xlabel('Nombre de détections',size=15)
+	if do_log_scale:
+		plt.title('Nombre de détections en échelle log₂ (confiance ≥ 0.25)',size=18)
+		plt.xlabel('log₂(Nombre de détections)',size=15)
+	else:
+		plt.title('Nombre de détections (confiance ≥ 0.25)',size=18)
+		plt.xlabel('Nombre de détections',size=15)
 	plt.ylabel("Espèce d'oiseau",size=15)
-	plt.xticks(np.arange(0,95,5),np.arange(0,95,5))
+	#plt.xticks(np.arange(0,95,5),np.arange(0,95,5))
 	plt.grid()
 	plt.tight_layout()
 	export_figure(
@@ -292,6 +299,7 @@ def show_barplot_frequence(
 def show_scatterplot_freq_conf(
 	df,
 	output_file_fig = None,
+	do_log_scale    = True,
 ):
 	# Pour chaque oiseau on calcule le nombre de fois qu'il a été détecté
 	s_count = df['oiseau_fr'].value_counts().sort_index()
@@ -301,6 +309,9 @@ def show_scatterplot_freq_conf(
 	df_top     = df_sorted[['oiseau_fr','confidence']].groupby('oiseau_fr').head(5)
 	s_top      = df_top.groupby('oiseau_fr')['confidence'].mean().sort_index()
 	s_top.name = 'confidence_mean'
+	# Si on se met en échelle log2 pour le dénombrement
+	if do_log_scale:
+		s_count = np.log2(s_count)
 	# Concaténation du dénombrement et des confiances moyennes des 5 plus confiantes observations
 	df_count_top = pd.concat((s_count,s_top),axis=1)
 	print(df_count_top)
@@ -312,10 +323,14 @@ def show_scatterplot_freq_conf(
 		figsize = (12,8),
 		s       = 5,
 	)
-	plt.title('Confiance moyenne vs nombre de détections (confiance ≥ 0.25)',size=18)
-	plt.xlabel('Nombre de détections',size=15)
+	if do_log_scale:
+		plt.title('Confiance moyenne vs log₂ du nombre de détections (confiance ≥ 0.25)',size=18)
+		plt.xlabel('log₂(Nombre de détections)',size=15)
+	else:
+		plt.title('Confiance moyenne vs nombre de détections (confiance ≥ 0.25)',size=18)
+		plt.xlabel('Nombre de détections',size=15)
 	plt.ylabel('Moyenne de la confiance des 5 plus confiantes détections',size=15)
-	plt.xticks(np.arange(0,100,5),np.arange(0,100,5))
+	#plt.xticks(np.arange(0,100,5),np.arange(0,100,5))
 	yticks = np.arange(0.2,1.05,0.05).round(2)
 	plt.yticks(yticks,[format(y,'0.2f') for y in yticks])
 	# https://adjusttext.readthedocs.io/en/latest/_modules/adjustText.html
@@ -345,6 +360,7 @@ def analyse_birds(
 	output_file_fig_freq_conf  = None,
 	datetime_start             = None,
 	datetime_end               = None,
+	do_log_scale               = True,
 ):
 	# On importe les données
 	print('Importing :',input_file)
@@ -373,6 +389,7 @@ def analyse_birds(
 		show_barplot_frequence(
 			df              = df,
 			output_file_fig = output_file_fig_frequence,
+			do_log_scale    = do_log_scale,
 		)
 
 	do_show_scatterplot_freq_conf=1
@@ -380,6 +397,7 @@ def analyse_birds(
 		show_scatterplot_freq_conf(
 			df              = df,
 			output_file_fig = output_file_fig_freq_conf,
+			do_log_scale    = do_log_scale,
 		)
 
 
@@ -390,10 +408,10 @@ def analyse_birds(
 
 def main():
 
-	date = '2024-05-16' # Date où les fichiers audio ont été enregistrés
+	date = '2024-05-18' # Date où les fichiers audio ont été enregistrés
 
 	# Une fonction pour créer un fichier CSV d'oiseaux détectés à partir de fichiers audio
-	do_input_files_to_DataFrame=1
+	do_input_files_to_DataFrame=0
 	if do_input_files_to_DataFrame:
 		input_files_to_DataFrame(
 			input_files = sorted(glob.glob(f'input/audio/{date} *.wav')), # En entrée on prend les fichiers audio WAV
@@ -403,7 +421,7 @@ def main():
 		)
 
 	# Une fonction pour traduire les oiseaux de l'anglais vers le français
-	do_translate_birds=1
+	do_translate_birds=0
 	if do_translate_birds:
 		translate_birds(
 			input_file_detections  = f'output/{date}_df_detections_local_en.csv',

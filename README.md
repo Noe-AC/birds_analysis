@@ -27,3 +27,5 @@
 - 2024-05-11 : Ajout d'une option pour exporter les figures de l'analyse des détections.
 - 2024-05-16 : Ajout d'oiseaux dans la liste d'oiseaux traduits.
 - 2024-05-16 : Enlevé l'ancien flux et léger nettoyage du code.
+- 2024-05-18 : Ajout d'oiseaux dans la liste d'oiseaux traduits.
+- 2024-05-18 : Axes du nombre de détections mis en échelle log2 pour faciliter la lecture des graphiques.
