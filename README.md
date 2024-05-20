@@ -29,3 +29,5 @@
 - 2024-05-16 : Enlevé l'ancien flux et léger nettoyage du code.
 - 2024-05-18 : Ajout d'oiseaux dans la liste d'oiseaux traduits.
 - 2024-05-18 : Axes du nombre de détections mis en échelle log2 pour faciliter la lecture des graphiques.
+- 2024-05-20 : Ajout d'oiseaux dans la liste d'oiseaux traduits.
+- 2024-05-20 : Correction d'un bug dans le cas de nom de fichier avec un numéro après l'horodatage.

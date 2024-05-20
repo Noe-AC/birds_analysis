@@ -80,8 +80,9 @@ def input_files_to_DataFrame(
 		print(f'\nFichier audio {counter}/{len(input_files_to_analyse)}.')
 		print('input_file =',input_file)
 
-		# On crée un objet datetime
-		datetime_str = input_file.split('/')[-1].split('.')[0]
+		# À partir du nom du fichier on prend le datetime au format string
+		datetime_str = input_file.split('/')[-1].split('.')[0][:15]
+		# Conversion du datetime de string à objet
 		datetime_obj = datetime.strptime(datetime_str, "%Y-%m-%d %H%M")
 
 		# Détection des oiseaux via BirdNet
@@ -408,10 +409,10 @@ def analyse_birds(
 
 def main():
 
-	date = '2024-05-18' # Date où les fichiers audio ont été enregistrés
+	date = '2024-05-20' # Date où les fichiers audio ont été enregistrés
 
 	# Une fonction pour créer un fichier CSV d'oiseaux détectés à partir de fichiers audio
-	do_input_files_to_DataFrame=0
+	do_input_files_to_DataFrame=1
 	if do_input_files_to_DataFrame:
 		input_files_to_DataFrame(
 			input_files = sorted(glob.glob(f'input/audio/{date} *.wav')), # En entrée on prend les fichiers audio WAV
@@ -421,7 +422,7 @@ def main():
 		)
 
 	# Une fonction pour traduire les oiseaux de l'anglais vers le français
-	do_translate_birds=0
+	do_translate_birds=1
 	if do_translate_birds:
 		translate_birds(
 			input_file_detections  = f'output/{date}_df_detections_local_en.csv',
